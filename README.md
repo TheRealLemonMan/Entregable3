@@ -80,7 +80,9 @@ ultimaPartida = fecha de la primera partida ordenada, en formato ISO
 porcentajeAvanceActual = porcentajeAvance de esa misma partida
 ```
 
-Si todavía no existen partidas, devuelvo `totalPartidas: 0`, `horasTotales: 0`, `ultimaPartida: null` y `porcentajeAvanceActual: 0`. Ordenar por `fecha` descendente hace que la última sesión cronológica —no necesariamente el documento creado más recientemente— determine la fecha y el avance actuales.
+Si todavía no existen partidas, devuelvo `totalPartidas: 0`, `horasTotales: 0`, `ultimaPartida: null` y `porcentajeAvanceActual: 0`. Ordenar por `fecha` descendente hace que la última sesión cronológica —no necesariamente el documento creado más recientemente— determine la fecha y el avance actuales. Cuando dos sesiones tienen la misma fecha, uso `createdAt` y `_id` descendentes como desempate para que la sesión insertada más recientemente aparezca primero.
+
+Para probar y demostrar las métricas, recomiendo registrar cada sesión en días distintos, por ejemplo en días consecutivos. El formulario maneja la fecha con granularidad `YYYY-MM-DD`, así que dos sesiones del mismo día comparten el mismo valor de `fecha` y el orden cronológico por `fecha: -1` no basta por sí solo para distinguir cuál ocurrió después dentro de ese día. El desempate por inserción mantiene un resultado determinista; aun así, usar fechas distintas hace más evidente en la demostración por qué una sesión es la más reciente y qué `porcentajeAvanceActual` debe reflejarse.
 
 ## Arquitectura
 
