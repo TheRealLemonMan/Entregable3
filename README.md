@@ -187,8 +187,8 @@ Para arrancar la compilación del servidor uso `npm start` desde `backend/`. Par
 1. Creo un **Static Site** conectado al mismo repositorio y establezco `frontend` como **Root Directory**.
 2. Configuro **Build Command** como `npm install && npm run build` y **Publish Directory** como `dist`.
 3. Defino `VITE_API_URL` con la URL pública del Web Service, sin `/api`, por ejemplo `https://checkpoint-backend-api.onrender.com`.
-4. Despliego y pruebo tanto la navegación como la recarga directa de rutas. Incluí `frontend/public/_redirects` (`/* /index.html 200`) para que Render sirva la SPA al volver a abrir rutas de React Router.
-5. Si Render asigna otros dominios, actualizo `CLIENT_ORIGIN` y `VITE_API_URL` con las URLs efectivas y vuelvo a desplegar los servicios correspondientes.
+4. En **Settings → Redirects/Rewrites** del Static Site, agrego una regla con acción **Rewrite**, source `/*` y destination `/index.html`. Render no importa automáticamente el archivo `public/_redirects`, así que esta regla del dashboard es necesaria para recargar rutas de React Router. Mantengo `frontend/public/_redirects` en el proyecto para proveedores que sí admiten ese formato.
+5. Despliego y pruebo tanto la navegación como la recarga directa de rutas. Si Render asigna otros dominios, actualizo `CLIENT_ORIGIN` y `VITE_API_URL` con las URLs efectivas y vuelvo a desplegar los servicios correspondientes.
 
 ### Enlaces de entrega
 
