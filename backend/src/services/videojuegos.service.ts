@@ -60,15 +60,15 @@ export async function listarPartidasVideojuego(id: string) {
 export async function obtenerResumenVideojuego(id: string): Promise<ResumenVideojuego> {
   await obtenerVideojuego(id);
   const partidas = await PartidaModel.find({ videojuego: new Types.ObjectId(id) })
-    .select("fecha duracionMinutos porcentajeAvance")
-    .sort({ fecha: -1, createdAt: -1 });
+    .select("fecha createdAt duracionMinutos porcentajeAvance")
+    .sort({ fecha: -1, createdAt: -1, _id: -1 });
   const minutosTotales = partidas.reduce((total, partida) => total + partida.duracionMinutos, 0);
-  const masReciente = partidas[0];
+  const partidaMasReciente = partidas[0];
 
   return {
     totalPartidas: partidas.length,
     horasTotales: Math.round((minutosTotales / 60) * 10) / 10,
-    ultimaPartida: masReciente ? masReciente.fecha.toISOString() : null,
-    porcentajeAvanceActual: masReciente?.porcentajeAvance ?? 0,
+    ultimaPartida: partidaMasReciente ? partidaMasReciente.fecha.toISOString() : null,
+    porcentajeAvanceActual: partidaMasReciente?.porcentajeAvance ?? 0,
   };
 }
