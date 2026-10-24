@@ -26,7 +26,7 @@ export function ErrorMessage({ message, onRetry }: FeedbackProps) {
   return (
     <div className="feedback feedback-error" role="alert">
       <span>{message}</span>
-      {onRetry && <button className="button button-small" onClick={onRetry}>Reintentar</button>}
+      {onRetry && <button className="button button-small" type="button" onClick={onRetry}>Reintentar</button>}
     </div>
   );
 }

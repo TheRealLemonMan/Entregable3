@@ -1,202 +1,199 @@
-# Checkpoint — Diario Gamer
+# Checkpoint — Diario de Progreso Gamer
 
-**Checkpoint — Diario de Progreso Gamer** es una aplicación web full-stack para llevar una biblioteca personal de videojuegos, registrar sesiones de juego y consultar el progreso, logros y tiempo acumulado de cada aventura. La interfaz está en español, es adaptable a escritorio y móvil y consume una API REST tipada.
+**Checkpoint** es mi aplicación full-stack para registrar qué videojuegos estoy jugando, cuánto tiempo les dedico y qué avance real alcanzo en cada sesión. La diseñé para resolver el problema de dispersar ese seguimiento entre notas, listas y recuerdos: ahora puedo organizar mi biblioteca, marcar logros y consultar un historial cronológico desde una sola interfaz.
 
-## Funcionalidades
+## Qué implementé
 
-- Crear, consultar, editar y eliminar videojuegos con plataforma, género, estado, logros y URL externa de portada.
-- Filtrar la biblioteca por plataforma, género y estado.
-- Marcar logros obtenidos directamente desde el detalle.
-- Registrar y eliminar sesiones con fecha, duración, avance y notas.
-- Consultar el resumen de sesiones, las horas jugadas y el progreso más reciente.
-- Mostrar estados de carga, error recuperable y colección vacía.
+- Una biblioteca filtrable por plataforma, género y estado.
+- Alta, edición y eliminación de videojuegos, con portada por URL externa.
+- Logros embebidos que puedo marcar directamente desde el detalle.
+- Registro y eliminación de sesiones, con fecha, duración, avance y notas.
+- Historial global y por videojuego, además de un resumen calculado en el servidor.
+- Una SPA responsive con estados visibles de carga, error recuperable y colección vacía.
+
+## Decisiones de modelado: datos embebidos y referenciados
+
+Diseñé `Videojuego` para guardar sus datos propios: nombre, URL de portada opcional, plataforma, género, estado, logros y timestamps. Definí los valores permitidos mediante enums de TypeScript y validaciones del esquema Mongoose.
+
+### Por qué embebí `logros`
+
+Modelé `logros` como subdocumentos `{ nombre, obtenido }` dentro de `Videojuego`. En mi dominio, los logros se leen siempre junto con la ficha del juego, no tienen ciclo de vida independiente y no justifican una colección aparte. Además, cada juego tiene un conjunto finito y acotado de objetivos. Embebidos, puedo obtener y actualizar un logro como parte del documento al que pertenece.
+
+### Por qué referencié `Partida`
+
+Guardé cada `Partida` en su propia colección y la vinculé con el videojuego mediante un `ObjectId`. El historial puede crecer de forma ilimitada a lo largo de meses o años; también necesito consultarlo independientemente, por ejemplo para recorrer mis sesiones recientes o todo mi historial semanal. Mantener las sesiones separadas evita que el documento principal se sature y se acerque al límite BSON de 16 MB. La referencia me permite consultar, ordenar, eliminar y agregar las partidas sin cargar todos esos datos dentro de cada videojuego.
+
+## Cómo calculo el resumen de progreso
+
+Implementé la lógica en `backend/src/services/videojuegos.service.ts`, no en el cliente. Así, el cálculo usa una única regla para cualquier consumidor de la API y la interfaz solo presenta un resultado calculado por el backend.
+
+Para el videojuego solicitado, primero verifico que exista y luego consulto sus partidas ordenadas cronológicamente por `fecha` descendente. A partir de esa lista:
+
+```text
+totalPartidas = cantidad de partidas
+minutosTotales = suma de duracionMinutos
+horasTotales = Math.round((minutosTotales / 60) * 10) / 10
+ultimaPartida = fecha de la primera partida ordenada, en formato ISO
+porcentajeAvanceActual = porcentajeAvance de esa misma partida
+```
+
+Si todavía no existen partidas, devuelvo `totalPartidas: 0`, `horasTotales: 0`, `ultimaPartida: null` y `porcentajeAvanceActual: 0`. Ordenar por `fecha` descendente hace que la última sesión cronológica —no necesariamente el documento creado más recientemente— determine la fecha y el avance actuales.
 
 ## Arquitectura
 
-El repositorio contiene dos aplicaciones desacopladas:
+Separé el código para mantener claras las responsabilidades y que cada capa pueda evolucionar sin mezclar acceso HTTP, reglas de negocio y persistencia.
 
-### Backend (`backend/`)
+```text
+backend/
+└── src/
+    ├── config/        # Variables de entorno y conexión a MongoDB
+    ├── models/        # Esquemas e interfaces Mongoose
+    ├── services/      # Reglas de negocio y consultas
+    ├── controllers/   # Adaptación de req/res y status HTTP
+    ├── routes/        # Endpoints Express
+    ├── middlewares/   # requestId, logger, asyncHandler y errores
+    ├── types/         # Tipos de dominio
+    ├── app.ts
+    └── server.ts
 
-API REST construida con Node.js, Express, TypeScript y Mongoose, organizada en capas:
+frontend/
+└── src/
+    ├── services/      # Cliente HTTP y funciones de videojuegos/partidas
+    ├── pages/         # Biblioteca, detalle, formularios e historial
+    ├── components/    # Layout, portadas, skeletons y diálogos
+    ├── types.ts
+    └── App.tsx        # Rutas React Router
+```
 
-- **Routes** (`src/routes/`): declara los endpoints y conecta cada ruta con un controlador.
-- **Controllers** (`src/controllers/`): interpreta solicitudes HTTP, llama servicios y establece respuestas/status.
-- **Services** (`src/services/`): concentra reglas de negocio y consultas a modelos.
-- **Models** (`src/models/`): define esquemas e interfaces persistidas en MongoDB.
-- **Middlewares** (`src/middlewares/`): asigna IDs de solicitud, registra tiempos, adapta funciones asíncronas y centraliza errores.
-- **Config** (`src/config/`): valida el entorno y conecta con MongoDB.
-
-### Frontend (`frontend/`)
-
-SPA con React, TypeScript, Vite y React Router DOM. La capa `src/services/` centraliza las llamadas HTTP y las páginas no realizan solicitudes de red directamente. La presentación utiliza CSS modular de la aplicación con estilos responsive, estados accesibles y soporte para `prefers-reduced-motion`; **no se emplea Tailwind CSS**.
-
-## Modelo de datos y justificación
-
-### Videojuego
-
-El documento `Videojuego` contiene:
-
-- `nombre`: string requerido y recortado.
-- `portadaUrl`: URL externa opcional.
-- `plataforma`: `PC`, `PlayStation`, `Xbox`, `Switch` o `Movil`.
-- `genero`: `accion`, `rol`, `estrategia`, `puzzle`, `deportes` u `otro`.
-- `estado`: `jugando`, `pausado`, `completado` o `abandonado`.
-- `logros`: subdocumentos embebidos `{ nombre, obtenido }`.
-- Timestamps automáticos `createdAt` y `updatedAt`.
-
-### Partida
-
-Cada documento `Partida` almacena una referencia `ObjectId` al videojuego (`ref: "Videojuego"`), fecha, duración mínima de un minuto, avance de 0 a 100, notas opcionales y timestamps. La lista general usa `populate("videojuego")` para mostrar el juego relacionado.
-
-### Por qué los logros se embeben
-
-Los **logros** tienen un ciclo de vida acotado y dependiente del videojuego: no existen por separado de su juego y normalmente se consultan o actualizan desde la pantalla de detalle. Embebidos, se cargan junto al juego y su estado se modifica de forma atómica dentro del documento. Su tamaño y cantidad son controlados por el catálogo de logros propio de cada título.
-
-### Por qué las partidas se referencian
-
-Las **partidas** crecen sin límite práctico a lo largo del tiempo y se consultan, ordenan, eliminan y agregan de manera independiente. Guardarlas embebidas haría que el documento creciera continuamente y pudiera alcanzar el límite BSON de **16 MB** por documento. Una colección independiente permite paginar o consultar el historial y hacer agregaciones sin cargar/modificar el documento principal; la referencia conserva la relación con el videojuego.
-
-## Resumen de progreso
-
-El servicio que implementa `GET /api/videojuegos/:id/resumen` primero comprueba que exista el videojuego. Después obtiene sus partidas ordenadas por fecha descendente y calcula:
-
-1. `totalPartidas`: número de sesiones asociadas.
-2. `minutosTotales = suma(partida.duracionMinutos)`.
-3. `horasTotales = Number((minutosTotales / 60).toFixed(1))`.
-4. `ultimaPartida`: fecha de la primera partida de la lista ordenada, serializada con `toISOString()`, o `null` si no existen sesiones.
-5. `porcentajeAvanceActual`: avance de esa misma sesión cronológicamente más reciente, o `0` si no existen sesiones.
-
-El orden descendente por `fecha` asegura que el avance presentado corresponde a la última sesión registrada según su fecha de juego, no al orden de creación del documento.
+En el backend, el flujo es **Routes → Controllers → Services → Models**. En el frontend, las **páginas consumen servicios de API desacoplados** y componen componentes reutilizables; ninguna página hace `fetch` directamente. Construí la SPA con React, TypeScript, Vite y React Router DOM, y usé CSS modular de la aplicación para los estilos responsive.
 
 ## API REST
 
-Todos los endpoints están bajo el prefijo `/api`.
+Todos mis endpoints usan el prefijo `/api`.
 
-| Método | Ruta | Uso |
+| Método | Ruta | Función |
 |---|---|---|
-| GET | `/health` | Comprueba que el servidor responde. |
-| GET | `/videojuegos` | Lista juegos; acepta filtros opcionales `plataforma`, `genero` y `estado`. |
-| GET | `/videojuegos/:id` | Detalle de un videojuego. |
-| POST | `/videojuegos` | Crea un videojuego. |
-| PUT | `/videojuegos/:id` | Actualiza sus datos. |
-| DELETE | `/videojuegos/:id` | Elimina el juego y sus partidas asociadas. |
-| PATCH | `/videojuegos/:id/logros/:logroId` | Actualiza `obtenido` del logro embebido. |
-| GET | `/videojuegos/:id/partidas` | Historial del videojuego. |
-| GET | `/videojuegos/:id/resumen` | Resumen calculado de progreso. |
-| GET | `/partidas` | Lista partidas con el videojuego populado. |
-| POST | `/partidas` | Registra una partida después de validar la referencia. |
-| DELETE | `/partidas/:id` | Elimina una partida. |
+| `GET` | `/health` | Verifico que el servicio esté disponible. |
+| `GET` | `/videojuegos` | Listo videojuegos y acepto filtros opcionales de plataforma, género y estado. |
+| `GET` | `/videojuegos/:id` | Obtengo el detalle de un videojuego. |
+| `POST` | `/videojuegos` | Creo un videojuego. |
+| `PUT` | `/videojuegos/:id` | Actualizo un videojuego. |
+| `DELETE` | `/videojuegos/:id` | Elimino el juego y sus partidas asociadas. |
+| `PATCH` | `/videojuegos/:id/logros/:logroId` | Marco o alterno un logro embebido. |
+| `GET` | `/videojuegos/:id/partidas` | Consulto el historial de un juego. |
+| `GET` | `/videojuegos/:id/resumen` | Obtengo el resumen calculado en el servicio. |
+| `GET` | `/partidas` | Listo partidas con el videojuego asociado mediante `populate`. |
+| `POST` | `/partidas` | Creo una partida después de validar que exista su videojuego. |
+| `DELETE` | `/partidas/:id` | Elimino una partida. |
 
-El backend responde con 400 para validación e IDs mal formados, 404 para recursos o referencias inexistentes y 500 para errores inesperados. Cada solicitud obtiene un UUID en `X-Request-Id`, también incluido en las respuestas de error, y el logger registra método, ruta, status y duración.
+## Manejo centralizado de errores
 
-## Requisitos
+Centralicé el mapeo de errores en `backend/src/middlewares/errorHandler.ts`. Cada solicitud recibe un UUID que envío en el header `X-Request-Id`; también lo incluyo en errores y lo uso para relacionar la respuesta con el log de método, ruta, estado y duración.
+
+| Error | HTTP | Qué hago |
+|---|---:|---|
+| Validación de esquema de Mongoose | `400` | Devuelvo el error de validación. |
+| `CastError` por ID o valor incompatible | `400` | Indico que el valor no tiene el formato esperado. |
+| Recurso o videojuego referenciado inexistente | `404` | Respondo que el recurso no fue encontrado. |
+| Error inesperado de servidor o base de datos | `500` | Registro el detalle en servidor y devuelvo un mensaje con `requestId`. |
+
+## Instalación y ejecución local
+
+### Requisitos
 
 - Node.js 20 o superior y npm.
 - MongoDB Atlas o una instancia MongoDB accesible.
-- Git para clonar el repositorio.
+- Git.
 
-## Ejecución local
-
-### 1. Obtener el código
+### 1. Clono el repositorio
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd <CARPETA_DEL_REPOSITORIO>
+git clone https://github.com/TheRealLemonMan/Entregable3.git
+cd Entregable3
 ```
 
-### 2. Configurar y arrancar el backend
-
-Desde `backend/`:
+### 2. Configuro y ejecuto el backend
 
 ```bash
+cd backend
 npm install
-cp .env.example .env
 ```
 
-En Windows PowerShell, para copiar el archivo de ejemplo:
+Copio `backend/.env.example` como `backend/.env` y configuro mis valores:
 
-```powershell
-Copy-Item .env.example .env
+```dotenv
+PORT=5000
+MONGODB_URI=<mi_uri_de_mongodb>
+CLIENT_ORIGIN=http://localhost:5173
 ```
 
-Edita `backend/.env` y define:
+`MONGODB_URI` es obligatoria. No subo mi `.env` ni credenciales al repositorio; `.gitignore` excluye esos archivos.
 
-| Variable | Requerida | Descripción |
-|---|---|---|
-| `PORT` | No | Puerto del servicio; predeterminado `5000`. |
-| `MONGODB_URI` | Sí | URI de conexión a MongoDB. Usa credenciales propias fuera del repositorio. |
-| `CLIENT_ORIGIN` | No | Origen(es) frontend permitidos por CORS, separados por comas. Por defecto `http://localhost:5173`. |
-
-Inicia el servidor de desarrollo:
+Inicio el servidor de desarrollo desde `backend/`:
 
 ```bash
 npm run dev
 ```
 
-El health check local está en `http://localhost:5000/api/health`.
+Compruebo la API en `http://localhost:5000/api/health`.
 
-### 3. Configurar y arrancar el frontend
+### 3. Configuro y ejecuto el frontend
 
-En otra terminal, desde `frontend/`:
+En otra terminal:
 
 ```bash
+cd frontend
 npm install
-cp .env.example .env
 ```
 
-En Windows PowerShell:
+Copio `frontend/.env.example` como `frontend/.env`. La variable `VITE_API_URL` define la URL base del backend, sin el sufijo `/api`:
 
-```powershell
-Copy-Item .env.example .env
+```dotenv
+VITE_API_URL=http://localhost:5000
 ```
 
-`frontend/.env` contiene `VITE_API_URL`, la URL base del backend sin `/api`. En local se usa `http://localhost:5000`; Vite utiliza ese mismo valor como fallback si la variable no está definida.
+Si no la defino, el cliente usa de forma segura `http://localhost:5000`. Inicio Vite desde `frontend/`:
 
 ```bash
 npm run dev
 ```
 
-La aplicación estará en `http://localhost:5173`.
+Abro `http://localhost:5173`.
 
-### Compilar y ejecutar producción local
+### 4. Compilo las aplicaciones
 
-Ejecuta en cada carpeta de aplicación:
+Desde cada carpeta (`backend/` y `frontend/`) ejecuto:
 
 ```bash
 npm run build
 ```
 
-Para probar la compilación del backend: `cd backend && npm start`. Para previsualizar el build del frontend: `cd frontend && npm run preview`.
+Para arrancar la compilación del servidor uso `npm start` desde `backend/`. Para previsualizar la compilación de Vite uso `npm run preview` desde `frontend/`.
 
 ## Despliegue en Render
 
-La base de datos debe ser accesible desde Render. En MongoDB Atlas, autoriza el acceso de red para el servicio desplegado y utiliza una URI con permisos mínimos apropiados. No guardes credenciales en Git ni en archivos `.env.example`; define secretos desde **Environment** en Render.
+### Backend — Web Service
 
-### 1. Backend — Web Service
+1. Creo un **Web Service** conectado a mi repositorio y establezco `backend` como **Root Directory**.
+2. Configuro **Build Command** como `npm install && npm run build` y **Start Command** como `npm start`.
+3. En las variables de entorno del servicio defino:
+   - `MONGODB_URI`: mi URI de Atlas, como secreto de Render.
+   - `CLIENT_ORIGIN`: origen público exacto del Static Site, por ejemplo `https://checkpoint-gamer-app.onrender.com`.
+   - `PORT`: Render lo proporciona; mi aplicación lo lee y utiliza `5000` solo como valor predeterminado.
+4. Verifico el despliegue con `/api/health`.
 
-1. En Render selecciona **New → Web Service** y conecta el repositorio.
-2. Configura **Root Directory** como `backend`.
-3. Configura:
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm start`
-4. Añade las variables:
-   - `MONGODB_URI`: URI real de MongoDB Atlas (secreto).
-   - `CLIENT_ORIGIN`: URL exacta del Static Site frontend, por ejemplo `https://tu-frontend.onrender.com`.
-   - `PORT`: Render administra el puerto de servicio; la aplicación respeta `PORT` y usa `5000` como fallback.
-5. Despliega y verifica `https://<servicio-backend>.onrender.com/api/health`.
+### Frontend — Static Site
 
-### 2. Frontend — Static Site
+1. Creo un **Static Site** conectado al mismo repositorio y establezco `frontend` como **Root Directory**.
+2. Configuro **Build Command** como `npm install && npm run build` y **Publish Directory** como `dist`.
+3. Defino `VITE_API_URL` con la URL pública del Web Service, sin `/api`, por ejemplo `https://checkpoint-backend-api.onrender.com`.
+4. Despliego y pruebo tanto la navegación como la recarga directa de rutas. Incluí `frontend/public/_redirects` (`/* /index.html 200`) para que Render sirva la SPA al volver a abrir rutas de React Router.
+5. Si Render asigna otros dominios, actualizo `CLIENT_ORIGIN` y `VITE_API_URL` con las URLs efectivas y vuelvo a desplegar los servicios correspondientes.
 
-1. En Render selecciona **New → Static Site** y conecta el mismo repositorio.
-2. Configura **Root Directory** como `frontend`.
-3. Configura:
-   - **Build Command:** `npm install && npm run build`
-   - **Publish Directory:** `dist`
-4. Define `VITE_API_URL` con la URL pública del Web Service, sin añadir `/api`, por ejemplo `https://tu-backend.onrender.com`.
-5. Despliega y prueba la Biblioteca y la recarga directa de una ruta de React Router. `public/_redirects` se copia a `dist/_redirects` y configura el fallback SPA `/* /index.html 200`.
-6. Añade la URL pública del Static Site a `CLIENT_ORIGIN` en el servicio backend y vuelve a desplegar el backend si cambiaste el valor.
+### Enlaces de entrega
 
-### URLs de despliegue
+Estas son las URLs previstas para la entrega; si Render asigna dominios distintos, reemplazaré las URLs públicas después del despliegue.
 
-- Backend Web Service: **pendiente de despliegue** — `https://________________________________`
-- Frontend Static Site: **pendiente de despliegue** — `https://________________________________`
+- **Frontend en Producción:** [https://checkpoint-gamer-app.onrender.com](https://checkpoint-gamer-app.onrender.com)
+- **Backend API en Producción:** [https://checkpoint-backend-api.onrender.com](https://checkpoint-backend-api.onrender.com)
+- **Repositorio GitHub:** [TheRealLemonMan/Entregable3](https://github.com/TheRealLemonMan/Entregable3)

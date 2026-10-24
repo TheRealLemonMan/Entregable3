@@ -12,8 +12,11 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     res.status(400).json({ error: "Error de validación.", details: error.message, requestId: req.requestId });
     return;
   }
-  if (error instanceof mongoose.Error.CastError && error.path === "_id") {
-    res.status(400).json({ error: "El ID proporcionado no tiene un formato válido.", requestId: req.requestId });
+  if (error instanceof mongoose.Error.CastError) {
+    const message = error.path === "_id"
+      ? "El ID proporcionado no tiene un formato válido."
+      : `El valor de ${error.path} no tiene un formato válido.`;
+    res.status(400).json({ error: message, requestId: req.requestId });
     return;
   }
   if (error instanceof NotFoundError) {

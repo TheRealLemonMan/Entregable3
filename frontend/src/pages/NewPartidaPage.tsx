@@ -10,33 +10,39 @@ export function NewPartidaPage() {
   const [params] = useSearchParams();
   const [games, setGames] = useState<Videojuego[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const [form, setForm] = useState<PartidaInput>({ videojuego: params.get("videojuego") || "", fecha: new Date().toISOString().slice(0, 10), duracionMinutos: 60, porcentajeAvance: 0, notas: "" });
 
   async function loadGames() {
-    setLoading(true); setError("");
+    setLoading(true); setLoadError("");
     try {
       const data = await getVideojuegos();
       setGames(data);
       if (!params.get("videojuego") && data[0]) setForm((current) => ({ ...current, videojuego: data[0]._id }));
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar los videojuegos."); }
+    } catch (cause) { setLoadError(cause instanceof Error ? cause.message : "No fue posible cargar los videojuegos."); }
     finally { setLoading(false); }
   }
   useEffect(() => { void loadGames(); }, []);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError("");
+  async function saveSession() {
+    setSaveError("");
     try { await createPartida(form); navigate(form.videojuego ? `/videojuegos/${form.videojuego}` : "/partidas"); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible guardar la sesión."); }
+    catch (cause) { setSaveError(cause instanceof Error ? cause.message : "No fue posible guardar la sesión."); }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void saveSession();
   }
 
   if (loading) return <Loading message="Preparando formulario..." variant="form" />;
   return <section className="form-page">
     <Link className="back-link" to="/partidas">← Volver al historial</Link>
     <div className="form-heading"><span className="eyebrow">DIARIO DE SESIONES</span><h1>Nueva sesión<span className="title-dot">.</span></h1><p>Registra el tiempo y el progreso de tu última partida.</p></div>
-    {error && <ErrorMessage message={error} onRetry={() => void loadGames()} />}
-    {games.length === 0 ? <div className="empty-state"><h2>Primero añade un videojuego</h2><p>Necesitas tener al menos un videojuego para registrar una sesión.</p><Link className="button button-primary" to="/videojuegos/nuevo">Añadir videojuego</Link></div> :
+    {loadError ? <ErrorMessage message={loadError} onRetry={() => void loadGames()} /> : games.length === 0 ? <div className="empty-state"><h2>Primero añade un videojuego</h2><p>Necesitas tener al menos un videojuego para registrar una sesión.</p><Link className="button button-primary" to="/videojuegos/nuevo">Añadir videojuego</Link></div> :
       <form className="form-card" onSubmit={submit}>
+        {saveError && <div className="field-wide"><ErrorMessage message={saveError} onRetry={() => void saveSession()} /></div>}
         <label className="field field-wide">Videojuego<select required value={form.videojuego} onChange={(event) => setForm({ ...form, videojuego: event.target.value })}>{games.map((game) => <option key={game._id} value={game._id}>{game.nombre} · {game.plataforma}</option>)}</select></label>
         <label className="field">Fecha de sesión<input type="date" required value={form.fecha} onChange={(event) => setForm({ ...form, fecha: event.target.value })} /></label>
         <label className="field">Duración (minutos)<input type="number" min="1" step="1" required value={form.duracionMinutos} onChange={(event) => setForm({ ...form, duracionMinutos: Number(event.target.value) })} /></label>

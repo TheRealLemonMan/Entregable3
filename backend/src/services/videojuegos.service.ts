@@ -67,7 +67,7 @@ export async function obtenerResumenVideojuego(id: string): Promise<ResumenVideo
 
   return {
     totalPartidas: partidas.length,
-    horasTotales: Number((minutosTotales / 60).toFixed(1)),
+    horasTotales: Math.round((minutosTotales / 60) * 10) / 10,
     ultimaPartida: masReciente ? masReciente.fecha.toISOString() : null,
     porcentajeAvanceActual: masReciente?.porcentajeAvance ?? 0,
   };
