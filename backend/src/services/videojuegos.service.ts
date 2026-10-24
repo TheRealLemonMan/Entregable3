@@ -61,7 +61,7 @@ export async function obtenerResumenVideojuego(id: string): Promise<ResumenVideo
   await obtenerVideojuego(id);
   const partidas = await PartidaModel.find({ videojuego: new Types.ObjectId(id) })
     .select("fecha duracionMinutos porcentajeAvance")
-    .sort({ fecha: -1 });
+    .sort({ fecha: -1, createdAt: -1 });
   const minutosTotales = partidas.reduce((total, partida) => total + partida.duracionMinutos, 0);
   const masReciente = partidas[0];
 
