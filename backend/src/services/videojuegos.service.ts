@@ -61,7 +61,7 @@ export async function actualizarLogro(id: string, logroId: string, obtenido?: bo
 
 export async function listarPartidasVideojuego(id: string) {
   await obtenerVideojuego(id);
-  return PartidaModel.find({ videojuego: new Types.ObjectId(id) }).sort({ fecha: -1 });
+  return PartidaModel.find({ videojuego: new Types.ObjectId(id) }).sort({ fecha: -1, createdAt: -1, _id: -1 });
 }
 
 export async function obtenerResumenVideojuego(id: string): Promise<ResumenVideojuego> {

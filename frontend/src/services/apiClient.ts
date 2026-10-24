@@ -5,6 +5,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   try {
     response = await fetch(`${API_URL}/api${path}`, {
       ...options,
+      cache: "no-store",
       headers: {
         ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...options.headers,

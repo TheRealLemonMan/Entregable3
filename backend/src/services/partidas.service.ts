@@ -6,7 +6,7 @@ import { BadRequestError } from "./badRequestError";
 import { NotFoundError } from "./errors";
 
 export async function listarPartidas() {
-  return PartidaModel.find().populate("videojuego").sort({ fecha: -1 });
+  return PartidaModel.find().populate("videojuego").sort({ fecha: -1, createdAt: -1, _id: -1 });
 }
 
 export async function crearPartida(datos: PartidaInput) {

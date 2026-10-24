@@ -5,6 +5,12 @@ import { createPartida } from "../services/partidasApi";
 import { getVideojuegos } from "../services/videojuegosApi";
 import { PartidaInput, Videojuego } from "../types";
 
+function getLocalDateTimeValue() {
+  const now = new Date();
+  const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localNow.toISOString().slice(0, 16);
+}
+
 export function NewPartidaPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -12,7 +18,7 @@ export function NewPartidaPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saveError, setSaveError] = useState("");
-  const [form, setForm] = useState<PartidaInput>({ videojuego: params.get("videojuego") || "", fecha: new Date().toISOString().slice(0, 10), duracionMinutos: 60, porcentajeAvance: 0, notas: "" });
+  const [form, setForm] = useState<PartidaInput>({ videojuego: params.get("videojuego") || "", fecha: getLocalDateTimeValue(), duracionMinutos: 60, porcentajeAvance: 0, notas: "" });
 
   async function loadGames() {
     setLoading(true); setLoadError("");
@@ -27,7 +33,15 @@ export function NewPartidaPage() {
 
   async function saveSession() {
     setSaveError("");
-    try { await createPartida(form); navigate(form.videojuego ? `/videojuegos/${form.videojuego}` : "/partidas"); }
+    const fecha = new Date(form.fecha);
+    if (Number.isNaN(fecha.getTime())) {
+      setSaveError("Selecciona una fecha y hora válidas para la sesión.");
+      return;
+    }
+    try {
+      await createPartida({ ...form, fecha: fecha.toISOString() });
+      navigate(form.videojuego ? `/videojuegos/${form.videojuego}` : "/partidas");
+    }
     catch (cause) { setSaveError(cause instanceof Error ? cause.message : "No fue posible guardar la sesión."); }
   }
 
@@ -44,7 +58,7 @@ export function NewPartidaPage() {
       <form className="form-card" onSubmit={submit}>
         {saveError && <div className="field-wide"><ErrorMessage message={saveError} onRetry={() => void saveSession()} /></div>}
         <label className="field field-wide">Videojuego<select required value={form.videojuego} onChange={(event) => setForm({ ...form, videojuego: event.target.value })}>{games.map((game) => <option key={game._id} value={game._id}>{game.nombre} · {game.plataforma}</option>)}</select></label>
-        <label className="field">Fecha de sesión<input type="date" required value={form.fecha} onChange={(event) => setForm({ ...form, fecha: event.target.value })} /></label>
+        <label className="field">Fecha y hora de sesión<input type="datetime-local" required value={form.fecha} onChange={(event) => setForm({ ...form, fecha: event.target.value })} /></label>
         <label className="field">Duración (minutos)<input type="number" min="1" step="1" required value={form.duracionMinutos} onChange={(event) => setForm({ ...form, duracionMinutos: Number(event.target.value) })} /></label>
         <label className="field field-wide">Porcentaje de avance <span className="range-value">{form.porcentajeAvance}%</span><input type="range" min="0" max="100" value={form.porcentajeAvance} onChange={(event) => setForm({ ...form, porcentajeAvance: Number(event.target.value) })} /><span className="range-labels"><small>0% · INICIO</small><small>100% · COMPLETADO</small></span></label>
         <label className="field field-wide">Notas <small>OPCIONAL</small><textarea rows={4} maxLength={500} value={form.notas} placeholder="¿Qué lograste en esta sesión?" onChange={(event) => setForm({ ...form, notas: event.target.value })} /></label>
