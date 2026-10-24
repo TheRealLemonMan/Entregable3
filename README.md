@@ -11,6 +11,49 @@
 - Historial global y por videojuego, además de un resumen calculado en el servidor.
 - Una SPA responsive con estados visibles de carga, error recuperable y colección vacía.
 
+## Guía de Navegación y Uso de la Aplicación
+
+### Exploro mi biblioteca
+
+Al abrir `/`, llego a **Biblioteca**, que también está disponible desde el enlace **Biblioteca** de la navegación superior. En la barra **FILTRAR** uso los selectores **Plataforma**, **Género** y **Estado**; cada uno comienza en **Todos** y puedo combinar criterios para reducir la lista. Las tarjetas muestran la portada —o el arte abstracto de respaldo—, el nombre, la plataforma, el género y el número de logros.
+
+Desde una tarjeta abro el detalle seleccionando el nombre del videojuego. También puedo entrar a **Editar** o iniciar su eliminación desde **Eliminar**, que solicita confirmación antes de borrar el juego y sus sesiones.
+
+### Registro y edición de un videojuego
+
+El botón **Añadir videojuego** abre `/videojuegos/nuevo`. Allí completo el nombre, la plataforma, el género y el estado; también puedo pegar una **URL de la portada / imagen** y agregar logros iniciales con **Añadir logro**. Para guardar uso **Crear videojuego** y para salir sin guardar, **Cancelar**.
+
+Para modificar un título existente uso **Editar** en su tarjeta o **Editar juego** desde su detalle. La ruta es `/videojuegos/:id/editar`; al completar los cambios, el botón **Guardar cambios** vuelve al detalle del título.
+
+### Consulto el detalle y actualizo mi progreso
+
+En `/videojuegos/:id` consulto la información del título, su portada y estado. El bloque **Resumen de progreso** presenta cuatro métricas calculadas por la API:
+
+| Métrica en pantalla | Qué muestra |
+|---|---|
+| **SESIONES** | Cantidad de partidas registradas. |
+| **TIEMPO JUGADO** | Horas acumuladas, redondeadas a un decimal por el backend. |
+| **ÚLTIMA SESIÓN** | Fecha de la partida cronológicamente más reciente. |
+| **AVANCE ACTUAL** | Porcentaje guardado en esa última sesión. |
+
+Al abrir el detalle, la interfaz consulta el videojuego, el resumen y el historial; por eso refleja las sesiones guardadas en esa carga. Después de registrar una partida, regreso al detalle y sus métricas se vuelven a consultar. No implementé actualización en vivo mediante WebSocket.
+
+En **Logros** marco o desmarco la casilla de cada objetivo. La acción actualiza directamente el subdocumento embebido del videojuego. En **Sesiones recientes** reviso fecha, notas, duración y avance; puedo eliminar una sesión con el botón correspondiente y confirmo la acción en el diálogo.
+
+Para registrar una sesión desde el detalle uso **＋ Registrar sesión** o **＋ Añadir sesión**. Ambos llevan a `/partidas/nueva?videojuego=:id` con ese juego preseleccionado. En el formulario indico la **Fecha de sesión**, **Duración (minutos)**, ajusto **Porcentaje de avance**, añado **Notas** opcionales y guardo con **Guardar sesión**. Si accedo desde la lista global, selecciono el videojuego en el formulario.
+
+### Recorro todas mis sesiones
+
+El enlace superior **Sesiones** abre `/partidas`, donde veo **Tu historial** con las partidas ordenadas cronológicamente, el videojuego y su plataforma, las notas, la duración y el avance. Desde esta pantalla uso **＋ Registrar sesión** para crear una sesión sin salir primero de la lista. Cada entrada se puede eliminar; la aplicación pide confirmación antes de hacerlo.
+
+### Estados de carga, error y vacío
+
+En las pantallas conectadas a la API diseñé estados explícitos para que el recorrido sea comprensible mientras llegan los datos o si algo falla:
+
+- **Carga:** muestro skeletons para la biblioteca, el detalle, el historial global y los formularios.
+- **Error:** presento el mensaje devuelto por la operación y, cuando corresponde, el botón **Reintentar** para volver a consultar o guardar.
+- **Vacío:** en la biblioteca muestro **Todavía no hay juegos**; el historial global muestra **Sin sesiones todavía**; y el detalle indica si aún no existen sesiones o logros para ese videojuego. Si intento registrar una sesión sin juegos, ofrezco **Añadir videojuego**.
+
 ## Decisiones de modelado: datos embebidos y referenciados
 
 Diseñé `Videojuego` para guardar sus datos propios: nombre, URL de portada opcional, plataforma, género, estado, logros y timestamps. Definí los valores permitidos mediante enums de TypeScript y validaciones del esquema Mongoose.
