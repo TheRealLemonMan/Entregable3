@@ -72,5 +72,6 @@ export async function getPartidasVideojuego(req: Request, res: Response): Promis
 }
 
 export async function getResumenVideojuego(req: Request, res: Response): Promise<void> {
+  res.setHeader("Cache-Control", "no-store");
   res.json(await obtenerResumenVideojuego(routeParam(req, "id")));
 }
