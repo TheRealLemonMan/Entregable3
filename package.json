@@ -1,0 +1,40 @@
+{
+  "name": "entregable-3_andres-merino",
+  "version": "1.0.0",
+  "description": "**Checkpoint** es mi aplicación full-stack para registrar qué videojuegos estoy jugando, cuánto tiempo les dedico y qué avance real alcanzo en cada sesión. La diseñé para resolver el problema de dispersar ese seguimiento entre notas, listas y recuerdos: ahora puedo organizar mi biblioteca, marcar logros y consultar un historial cronológico desde una sola interfaz.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheRealLemonMan/Entregable3.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TheRealLemonMan/Entregable3/issues"
+  },
+  "homepage": "https://github.com/TheRealLemonMan/Entregable3#readme",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.10.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false,
+    "printWidth": 100,
+    "trailingComma": "all"
+  }
+}

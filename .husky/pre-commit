@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# 1. Bloquear .env / .env.local staged
+sh "$(dirname -- "$0")/block-env.sh"
+
+# 2. Prettier sobre archivos staged (ts, tsx, json, md)
+npx lint-staged
