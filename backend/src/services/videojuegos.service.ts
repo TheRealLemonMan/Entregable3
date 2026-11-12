@@ -1,7 +1,14 @@
 import { Types } from "mongoose";
+import { MetaModel } from "../models/meta.model";
 import { PartidaModel } from "../models/partida.model";
 import { VideojuegoModel } from "../models/videojuego.model";
-import { EstadoVideojuego, Genero, Plataforma, ResumenVideojuego, VideojuegoInput } from "../types/domain";
+import {
+  EstadoVideojuego,
+  Genero,
+  Plataforma,
+  ResumenVideojuego,
+  VideojuegoInput,
+} from "../types/domain";
 import { NotFoundError } from "./errors";
 
 export interface FiltroVideojuegos {
@@ -41,13 +48,24 @@ export async function actualizarVideojuego(id: string, datos: Partial<Videojuego
     runValidators: true,
   });
   if (!videojuego) throw new NotFoundError("Videojuego no encontrado.");
+
+  // RN-07: Si el juego pasa a completado o abandonado, se desactivan automáticamente sus metas
+  if (datos.estado === "completado" || datos.estado === "abandonado") {
+    await MetaModel.updateMany({ videojuego: videojuego._id, activa: true }, { activa: false });
+  }
+
   return videojuego;
 }
 
 export async function eliminarVideojuego(id: string) {
   const videojuego = await VideojuegoModel.findByIdAndDelete(id);
   if (!videojuego) throw new NotFoundError("Videojuego no encontrado.");
-  await PartidaModel.deleteMany({ videojuego: videojuego._id });
+
+  // Eliminación en cascada de partidas y metas asociadas
+  await Promise.all([
+    PartidaModel.deleteMany({ videojuego: videojuego._id }),
+    MetaModel.deleteMany({ videojuego: videojuego._id }),
+  ]);
 }
 
 export async function actualizarLogro(id: string, logroId: string, obtenido?: boolean) {
@@ -61,7 +79,11 @@ export async function actualizarLogro(id: string, logroId: string, obtenido?: bo
 
 export async function listarPartidasVideojuego(id: string) {
   await obtenerVideojuego(id);
-  return PartidaModel.find({ videojuego: new Types.ObjectId(id) }).sort({ fecha: -1, createdAt: -1, _id: -1 });
+  return PartidaModel.find({ videojuego: new Types.ObjectId(id) }).sort({
+    fecha: -1,
+    createdAt: -1,
+    _id: -1,
+  });
 }
 
 export async function obtenerResumenVideojuego(id: string): Promise<ResumenVideojuego> {
