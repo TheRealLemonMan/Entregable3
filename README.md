@@ -29,12 +29,12 @@ Para modificar un título existente uso **Editar** en su tarjeta o **Editar jueg
 
 En `/videojuegos/:id` consulto la información del título, su portada y estado. El bloque **Resumen de progreso** presenta cuatro métricas calculadas por la API:
 
-| Métrica en pantalla | Qué muestra |
-|---|---|
-| **SESIONES** | Cantidad de partidas registradas. |
-| **TIEMPO JUGADO** | Horas acumuladas, redondeadas a un decimal por el backend. |
-| **ÚLTIMA SESIÓN** | Fecha de la partida cronológicamente más reciente. |
-| **AVANCE ACTUAL** | Porcentaje guardado en esa última sesión. |
+| Métrica en pantalla | Qué muestra                                                |
+| ------------------- | ---------------------------------------------------------- |
+| **SESIONES**        | Cantidad de partidas registradas.                          |
+| **TIEMPO JUGADO**   | Horas acumuladas, redondeadas a un decimal por el backend. |
+| **ÚLTIMA SESIÓN**   | Fecha de la partida cronológicamente más reciente.         |
+| **AVANCE ACTUAL**   | Porcentaje guardado en esa última sesión.                  |
 
 Al abrir el detalle, la interfaz consulta el videojuego, el resumen y el historial; por eso refleja las sesiones guardadas en esa carga. Después de registrar una partida, regreso al detalle y sus métricas se vuelven a consultar. No implementé actualización en vivo mediante WebSocket.
 
@@ -116,31 +116,31 @@ En el backend, el flujo es **Routes → Controllers → Services → Models**. E
 
 Todos mis endpoints usan el prefijo `/api`.
 
-| Método | Ruta | Función |
-|---|---|---|
-| `GET` | `/health` | Verifico que el servicio esté disponible. |
-| `GET` | `/videojuegos` | Listo videojuegos y acepto filtros opcionales de plataforma, género y estado. |
-| `GET` | `/videojuegos/:id` | Obtengo el detalle de un videojuego. |
-| `POST` | `/videojuegos` | Creo un videojuego. |
-| `PUT` | `/videojuegos/:id` | Actualizo un videojuego. |
-| `DELETE` | `/videojuegos/:id` | Elimino el juego y sus partidas asociadas. |
-| `PATCH` | `/videojuegos/:id/logros/:logroId` | Marco o alterno un logro embebido. |
-| `GET` | `/videojuegos/:id/partidas` | Consulto el historial de un juego. |
-| `GET` | `/videojuegos/:id/resumen` | Obtengo el resumen calculado en el servicio. |
-| `GET` | `/partidas` | Listo partidas con el videojuego asociado mediante `populate`. |
-| `POST` | `/partidas` | Creo una partida después de validar que exista su videojuego. |
-| `DELETE` | `/partidas/:id` | Elimino una partida. |
+| Método   | Ruta                               | Función                                                                       |
+| -------- | ---------------------------------- | ----------------------------------------------------------------------------- |
+| `GET`    | `/health`                          | Verifico que el servicio esté disponible.                                     |
+| `GET`    | `/videojuegos`                     | Listo videojuegos y acepto filtros opcionales de plataforma, género y estado. |
+| `GET`    | `/videojuegos/:id`                 | Obtengo el detalle de un videojuego.                                          |
+| `POST`   | `/videojuegos`                     | Creo un videojuego.                                                           |
+| `PUT`    | `/videojuegos/:id`                 | Actualizo un videojuego.                                                      |
+| `DELETE` | `/videojuegos/:id`                 | Elimino el juego y sus partidas asociadas.                                    |
+| `PATCH`  | `/videojuegos/:id/logros/:logroId` | Marco o alterno un logro embebido.                                            |
+| `GET`    | `/videojuegos/:id/partidas`        | Consulto el historial de un juego.                                            |
+| `GET`    | `/videojuegos/:id/resumen`         | Obtengo el resumen calculado en el servicio.                                  |
+| `GET`    | `/partidas`                        | Listo partidas con el videojuego asociado mediante `populate`.                |
+| `POST`   | `/partidas`                        | Creo una partida después de validar que exista su videojuego.                 |
+| `DELETE` | `/partidas/:id`                    | Elimino una partida.                                                          |
 
 ## Manejo centralizado de errores
 
 Centralicé el mapeo de errores en `backend/src/middlewares/errorHandler.ts`. Cada solicitud recibe un UUID que envío en el header `X-Request-Id`; también lo incluyo en errores y lo uso para relacionar la respuesta con el log de método, ruta, estado y duración.
 
-| Error | HTTP | Qué hago |
-|---|---:|---|
-| Validación de esquema de Mongoose | `400` | Devuelvo el error de validación. |
-| `CastError` por ID o valor incompatible | `400` | Indico que el valor no tiene el formato esperado. |
-| Recurso o videojuego referenciado inexistente | `404` | Respondo que el recurso no fue encontrado. |
-| Error inesperado de servidor o base de datos | `500` | Registro el detalle en servidor y devuelvo un mensaje con `requestId`. |
+| Error                                         |  HTTP | Qué hago                                                               |
+| --------------------------------------------- | ----: | ---------------------------------------------------------------------- |
+| Validación de esquema de Mongoose             | `400` | Devuelvo el error de validación.                                       |
+| `CastError` por ID o valor incompatible       | `400` | Indico que el valor no tiene el formato esperado.                      |
+| Recurso o videojuego referenciado inexistente | `404` | Respondo que el recurso no fue encontrado.                             |
+| Error inesperado de servidor o base de datos  | `500` | Registro el detalle en servidor y devuelvo un mensaje con `requestId`. |
 
 ## Instalación y ejecución local
 
@@ -242,3 +242,28 @@ Estas son las URLs previstas para la entrega; si Render asigna dominios distinto
 - **Frontend en Producción:** [https://checkpoint-gamer-app.onrender.com](https://checkpoint-gamer-app.onrender.com)
 - **Backend API en Producción:** [https://checkpoint-backend-api.onrender.com](https://checkpoint-backend-api.onrender.com)
 - **Repositorio GitHub:** [TheRealLemonMan/Entregable3](https://github.com/TheRealLemonMan/Entregable3)
+
+## Cómo trabajamos con el agente
+
+El repositorio incluye un harness para mantener las instrucciones, las especificaciones y las verificaciones alineadas:
+
+- [`AGENTS.md`](AGENTS.md) reúne las reglas compartidas del proyecto, sus límites de seguridad y los comandos habituales.
+- [`CLAUDE.md`](CLAUDE.md) importa esas reglas mediante `@AGENTS.md`, evitando mantener instrucciones divergentes.
+- [`DESIGN.md`](DESIGN.md) es la referencia visual canónica para construir o modificar la interfaz.
+- La skill [`nueva-spec`](.agent/skills/nueva-spec/SKILL.md) genera una spec desde historias y tickets del backlog; exige criterios verificables y prohíbe escribir código o inventar alcance.
+- El hook de Husky [`.husky/pre-commit`](.husky/pre-commit) ejecuta [`.husky/block-env.sh`](.husky/block-env.sh) para impedir commits que incluyan `.env` o `.env.local`, y después ejecuta `lint-staged`. `.env.example` está permitido; no debe contener secretos.
+
+El flujo de desarrollo de E2 fue: **Diagnóstico → PRD → Backlog → Specs → TDD → Backend/Frontend → Deuda Técnica**. Las reglas de negocio se especifican antes de implementar; las pruebas y la documentación de API sirven para contrastar su cumplimiento.
+
+### Índice de documentos de `docs/`
+
+- [Diagnóstico del proyecto](docs/diagnostico.md)
+- [Épicas](docs/backlog/epicas.md)
+- [Backlog E2: historias, criterios y tickets](docs/backlog/E2-metas-y-rachas.md)
+- [PRD E2](docs/prd/prd.md)
+- [Spec técnica de backend](docs/specs/backend-meta-progreso.md)
+- [Spec técnica de frontend](docs/specs/frontend-progreso-meta.md)
+- [Matriz de pruebas de API](docs/evidencias/pruebas-api.md)
+- [Evidencia visual del hook de entorno](docs/evidencias/hook-env.png)
+- [Bitácora de trabajo con agentes](docs/bitacora.md)
+- [Auditoría de trazabilidad y hallazgos](docs/auditoria.md)
