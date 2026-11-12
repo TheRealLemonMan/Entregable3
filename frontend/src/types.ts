@@ -55,3 +55,61 @@ export interface Resumen {
   ultimaPartida: string | null;
   porcentajeAvanceActual: number;
 }
+
+export interface Hito {
+  _id?: string;
+  nombre: string;
+  horasRequeridas: number;
+}
+
+export interface HitoProgreso {
+  nombre: string;
+  horasRequeridas: number;
+  alcanzado: boolean;
+}
+
+export interface Meta {
+  _id: string;
+  videojuego: string;
+  horasSemanaDeseadas: number;
+  diasSemanaDeseados: number;
+  activa: boolean;
+  hitos: Hito[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface HitoInput {
+  nombre: string;
+  horasRequeridas: number;
+}
+
+export interface MetaInput {
+  videojuego: string;
+  horasSemanaDeseadas: number;
+  diasSemanaDeseados: number;
+  hitos?: HitoInput[];
+  activa?: boolean;
+}
+
+export interface ProgresoSemanal {
+  meta: {
+    _id: string;
+    horasSemanaDeseadas: number;
+    diasSemanaDeseados: number;
+    activa: boolean;
+  } | null;
+  progresoSemanal: {
+    horasJugadas: number;
+    horasSemanaDeseadas: number;
+    diasJugados: number;
+    diasSemanaDeseados: number;
+    porcentajeReal: number;
+    porcentajeVisual: number;
+  };
+  rachas: {
+    rachaActual: number;
+    mejorRacha: number;
+  };
+  hitos: HitoProgreso[];
+}
