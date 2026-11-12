@@ -13,6 +13,9 @@ export async function crearPartida(datos: PartidaInput) {
   if (typeof datos.videojuego !== "string" || !datos.videojuego.trim()) {
     throw new BadRequestError("El videojuego es obligatorio.");
   }
+  if (!Types.ObjectId.isValid(datos.videojuego)) {
+    throw new BadRequestError("El videojuego de referencia no tiene un formato de ID válido.");
+  }
   const videojuego = await VideojuegoModel.findById(datos.videojuego).select("_id");
   if (!videojuego) throw new NotFoundError("El videojuego de referencia no existe.");
   return PartidaModel.create({

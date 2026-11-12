@@ -10,6 +10,10 @@ export async function crearMeta(datos: MetaInput) {
     throw new BadRequestError("El videojuego es obligatorio.");
   }
 
+  if (!Types.ObjectId.isValid(datos.videojuego)) {
+    throw new BadRequestError("El videojuego de referencia no tiene un formato de ID válido.");
+  }
+
   const videojuego = await VideojuegoModel.findById(datos.videojuego);
   if (!videojuego) {
     throw new NotFoundError("El videojuego de referencia no existe.");
